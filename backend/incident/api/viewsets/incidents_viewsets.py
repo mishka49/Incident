@@ -10,21 +10,23 @@ from incident.api.serializers.incident_serializers import IncidentSerializer, In
 
 
 @extend_schema(tags=["Incidents"])
-class IncidentViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
+class IncidentViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
+    http_method_names = ["get", "post", "patch"]
     queryset = Incident.objects.all()
-    serializer_class = IncidentSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["status"]
 
-    @action(detail=True, methods=["patch"], url_path="change-status")
-    def change_status(self, request, pk=None):
-        incident = get_object_or_404(self.queryset, pk=pk)
-        serializer = IncidentStatusUpdateSerializer(data=request.data)
+    def get_serializer_class(self):
+        match self.action:
+            case "partial_update":
+                return IncidentStatusUpdateSerializer
+            case _:
+                return IncidentSerializer
 
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-        incident.status = serializer.validated_data["status"]
-        incident.save()
-
-        return Response(IncidentSerializer(incident).data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
