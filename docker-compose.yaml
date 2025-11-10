@@ -1,0 +1,58 @@
+version: '3.8'
+
+x-app_environment: &app_environment
+  environment:
+    - DEBUG
+    - API_DOCS_ENABLE
+    - SECRET_KEY
+    - TLS_MODE
+    - POSTGRES_PASSWORD
+    - POSTGRES_HOST
+    - POSTGRES_PORT
+    - POSTGRES_NAME
+    - POSTGRES_USER
+    - SITE_HOST
+
+services:
+  backend:
+    build:
+      context: ./backend
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    <<: *app_environment
+
+    volumes:
+      - ./backend/:/app/:cached
+#    entrypoint: ./entrypoint.sh
+    command: poetry run python manage.py runserver 0.0.0.0:8000
+#    command: poetry run gunicorn -c gunicorn_config.py config.wsgi:application
+    depends_on:
+      - db
+    ports:
+      - 8000:8000
+
+  db:
+    build:
+      context: ./db
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - postgresdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PORT=postgres
+      - POSTGRES_NAME=postgres
+      - POSTGRES_USER=postgres
+    ports:
+      - 15239:5432
+
+volumes:
+  postgresdata:
