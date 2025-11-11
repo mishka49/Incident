@@ -27,9 +27,8 @@ services:
 
     volumes:
       - ./backend/:/app/:cached
-#    entrypoint: ./entrypoint.sh
+    entrypoint: ./entrypoint.sh
     command: poetry run python manage.py runserver 0.0.0.0:8000
-#    command: poetry run gunicorn -c gunicorn_config.py config.wsgi:application
     depends_on:
       - db
     ports:
